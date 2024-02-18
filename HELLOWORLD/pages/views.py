@@ -1,13 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.views import View
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django import forms
-from django.shortcuts import render, redirect
-
-
+from django.core.exceptions import ValidationError
 
 
 # Create your views here.
@@ -95,13 +93,21 @@ class Product:
     ]
 
 
+
 class ProductForm(forms.Form):
     name = forms.CharField(required=True)
     price = forms.FloatField(required=True)
 
+    def clean_price(self):
+        price = self.cleaned_data.get('price')
+        if price is not None and price <= 0:
+            raise ValidationError("Price must be greater than 0.")
+        return price
+
 
 class ProductCreateView(View):
     template_name = 'products/create.html'
+    success_template_name = 'products/create_success.html'
 
     def get(self, request):
         form = ProductForm()
@@ -114,9 +120,10 @@ class ProductCreateView(View):
         form = ProductForm(request.POST)
         if form.is_valid():
             
-            return redirect(form) 
+            return render(request, self.success_template_name) 
         else:
             viewData = {}
             viewData["title"] = "Create product"
             viewData["form"] = form
             return render(request, self.template_name, viewData)
+
